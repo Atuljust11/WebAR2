@@ -45,7 +45,7 @@
 		import { ARButton } from 'three/addons/webxr/ARButton.js';
 		import { GLTFLoader } from 'three/addons/GLTFLoader.js';
 
-		console.log("v5");
+		console.log("v6");
 		let container;
 		let camera, scene, renderer;
 		let controller;
@@ -132,6 +132,9 @@
 			const geometry = new THREE.CylinderGeometry(0.1, 0.1, 0.2, 32).translate(0, 0.1, 0);
 			function onSelect() {
 				if (reticle.visible && !objectsPlaced && model) {
+					model.position.z=0 // Hide until placed
+				model.rotation.z=0
+				model.rotation.y=0
 
 					const material = new THREE.MeshPhongMaterial({ color: 0xffffff * Math.random() });
 					const mesh = new THREE.Mesh(geometry, material);
@@ -145,6 +148,8 @@
 					model.visible = true;
 
 					model.position.set(model2.position.x, model2.position.y, model2.position.z)
+
+					video.play()
 
 					// Apply video texture to first material
 					// if (model.children.length > 0) {
