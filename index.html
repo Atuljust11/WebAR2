@@ -28,7 +28,7 @@
 		import { ARButton } from 'three/addons/webxr/ARButton.js';
 		import { GLTFLoader } from 'three/addons/GLTFLoader.js';
 
-		console.log("v4");
+		console.log("v5");
 		let container;
 		let camera, scene, renderer;
 		let controller;
@@ -60,6 +60,7 @@
 			video = document.createElement('video');
 			video.loop = true;
 			video.muted = true;
+			video.crossOrigin = 'anonymous'; 
 			video.playsInline = true;
 			video.setAttribute('playsinline', '');
 			video.setAttribute('webkit-playsinline', '');
