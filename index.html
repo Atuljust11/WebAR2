@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+	<title>three.js ar - video texture on GLB</title>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+	<link type="text/css" rel="stylesheet" href="main.css">
+</head>
+
+<body>
+
+	<script>
+		var model, model2;
+	</script>
+
+	<script type="importmap">
+			{
+				"imports": {
+					"three": "../build/three.module.js",
+					"three/addons/": "./jsm/"
+				}
+			}
+		</script>
+
+		<script type="module">
+			import * as THREE from 'three';
+			import { ARButton } from 'three/addons/webxr/ARButton.js';
+			import { GLTFLoader } from 'three/addons/GLTFLoader.js';
+		
+			let container;
+			let camera, scene, renderer;
+			let controller;
+			let reticle;
+			let objectsPlaced = false;
+			let videoTexture;
+			let video;
+			let model;
+		
+			let hitTestSource = null;
+			let hitTestSourceRequested = false;
+		
+			init();
+		
+			async function init() {
+				container = document.createElement('div');
+				document.body.appendChild(container);
+		
+				scene = new THREE.Scene();
+				camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.01, 20);
+		
+				const light = new THREE.HemisphereLight(0xffffff, 0xbbbbff, 3);
+				light.position.set(0.5, 1, 0.25);
+				scene.add(light);
+		
+				// Create video element
+				video = document.createElement('video');
+				video.loop = true;
+				video.muted = true;
+				video.playsInline = true;
+				video.setAttribute('playsinline', '');
+				video.setAttribute('webkit-playsinline', '');
+				video.src = 'https://cdn.glitch.global/d5b13f95-53d7-4d7d-973b-73beb9a3f6ed/V2.webm?v=1744310333681';
+				
+				// Important: Wait for video to be ready
+				await new Promise((resolve) => {
+					video.oncanplaythrough = resolve;
+					video.load();
+				});
+		
+				// Create video texture
+				videoTexture = new THREE.VideoTexture(video);
+				videoTexture.minFilter = THREE.LinearFilter;
+				videoTexture.magFilter = THREE.LinearFilter;
+				videoTexture.format = THREE.RGBFormat;
+		
+				renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+				renderer.setPixelRatio(window.devicePixelRatio);
+				renderer.setSize(window.innerWidth, window.innerHeight);
+				renderer.setAnimationLoop(animate);
+				renderer.xr.enabled = true;
+				container.appendChild(renderer.domElement);
+		
+				document.body.appendChild(ARButton.createButton(renderer, { 
+					requiredFeatures: ['hit-test'],
+					// Add sessionstart callback to handle video play after user interaction
+					onSessionStart: async (session) => {
+						session.addEventListener('select', () => {
+							// Try to play video when user interacts in AR
+							video.play().catch(e => console.error('Video play failed:', e));
+						});
+					}
+				}));
+		
+				// Load GLB model
+				const loader = new GLTFLoader();
+				try {
+					const glbModel = await loader.loadAsync('https://cdn.glitch.global/d5b13f95-53d7-4d7d-973b-73beb9a3f6ed/all.glb?v=1744311946947');
+					model = glbModel.scene;
+					model.visible = false;
+					
+					// Apply video texture to model materials
+					model.traverse((child) => {
+						if (child.isMesh) {
+							child.material.map = videoTexture;
+							child.material.needsUpdate = true;
+						}
+					});
+				} catch (error) {
+					console.error('Error loading GLB model:', error);
+				}
+		
+				controller = renderer.xr.getController(0);
+				controller.addEventListener('select', onSelect);
+				scene.add(controller);
+		
+				reticle = new THREE.Mesh(
+					new THREE.RingGeometry(0.15, 0.2, 32).rotateX(- Math.PI / 2),
+					new THREE.MeshBasicMaterial()
+				);
+				reticle.matrixAutoUpdate = false;
+				reticle.visible = false;
+				scene.add(reticle);
+		
+				window.addEventListener('resize', onWindowResize);
+			}
+		
+			function onSelect() {
+				if (reticle.visible && !objectsPlaced && model) {
+					reticle.matrix.decompose(model.position, model.quaternion, model.scale);
+					model.visible = true;
+					
+					// Start video playback when model is placed
+					video.play().catch(e => console.error('Video play error:', e));
+					
+					objectsPlaced = true;
+					reticle.visible = false;
+				}
+			}
+		
+			function onWindowResize() {
+				camera.aspect = window.innerWidth / window.innerHeight;
+				camera.updateProjectionMatrix();
+				renderer.setSize(window.innerWidth, window.innerHeight);
+			}
+		
+			function animate(timestamp, frame) {
+				if (frame && !objectsPlaced) {
+					if (!hitTestSourceRequested) {
+						const session = renderer.xr.getSession();
+						session.requestReferenceSpace('viewer').then((referenceSpace) => {
+							session.requestHitTestSource({ space: referenceSpace }).then((source) => {
+								hitTestSource = source;
+							});
+						});
+						hitTestSourceRequested = true;
+					}
+		
+					if (hitTestSource) {
+						const hitTestResults = frame.getHitTestResults(hitTestSource);
+						const referenceSpace = renderer.xr.getReferenceSpace();
+						
+						if (hitTestResults.length) {
+							const hit = hitTestResults[0];
+							reticle.visible = true;
+							reticle.matrix.fromArray(hit.getPose(referenceSpace).transform.matrix);
+						} else {
+							reticle.visible = false;
+						}
+					}
+				}
+		
+				renderer.render(scene, camera);
+			}
+		</script>
+</body>
+
+</html>
