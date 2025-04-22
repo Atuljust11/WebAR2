@@ -11,7 +11,7 @@
 <body>
 
 	<script>
-		var model, model2;
+		var model, model2,video,videoTexture;
 	</script>
 
 	<script type="importmap">
@@ -23,21 +23,20 @@
 			}
 		</script>
 
-		<script type="module">
-			import * as THREE from 'three';
+	<script type="module">
+		import * as THREE from 'three';
 		import { ARButton } from 'three/addons/webxr/ARButton.js';
 		import { GLTFLoader } from 'three/addons/GLTFLoader.js';
 
-console.log("v2");
+		console.log("v4");
 		let container;
 		let camera, scene, renderer;
 		let controller;
 
 		let reticle;
 		let objectsPlaced = false;
-		let videoTexture;
-		let video;
-	
+
+
 
 		let hitTestSource = null;
 		let hitTestSourceRequested = false;
@@ -57,26 +56,26 @@ console.log("v2");
 			scene.add(light);
 
 			// Create video element
-        // Create video element
-        video = document.createElement('video');
-        video.loop = true;
-        video.muted = true;
-        video.playsInline = true;
-        video.setAttribute('playsinline', '');
-        video.setAttribute('webkit-playsinline', '');
-        video.src = 'V2.webm';
-        
-        // Important: Wait for video to be ready
-        await new Promise((resolve) => {
-            video.oncanplaythrough = resolve;
-            video.load();
-        });
+			// Create video element
+			video = document.createElement('video');
+			video.loop = true;
+			video.muted = true;
+			video.playsInline = true;
+			video.setAttribute('playsinline', '');
+			video.setAttribute('webkit-playsinline', '');
+			video.src = 'V2.webm';
 
-        // Create video texture
-        videoTexture = new THREE.VideoTexture(video);
-        videoTexture.minFilter = THREE.LinearFilter;
-        videoTexture.magFilter = THREE.LinearFilter;
-        videoTexture.format = THREE.RGBFormat;
+			// Important: Wait for video to be ready
+			await new Promise((resolve) => {
+				video.oncanplaythrough = resolve;
+				video.load();
+			});
+
+			// Create video texture
+			videoTexture = new THREE.VideoTexture(video);
+			videoTexture.minFilter = THREE.LinearFilter;
+			videoTexture.magFilter = THREE.LinearFilter;
+			videoTexture.format = THREE.RGBFormat;
 
 			renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
 			renderer.setPixelRatio(window.devicePixelRatio);
@@ -91,10 +90,17 @@ console.log("v2");
 			const loader = new GLTFLoader();
 			let glbModel;
 			try {
-				glbModel = await loader.loadAsync('https://cdn.glitch.global/d5b13f95-53d7-4d7d-973b-73beb9a3f6ed/all.glb?v=1744311946947'); // Replace with your GLB path
+				glbModel = await loader.loadAsync('all.glb'); // Replace with your GLB path
 				model = glbModel.scene;
-				model.visible = false; // Hide until placed
-        scene.add(model);
+				model.visible = true;
+				model.position.z=-2.0 // Hide until placed
+				model.rotation.z=-1.0
+				model.rotation.y=-1.0
+
+				model.children[0].children[0].children[0].children[0].material.map = videoTexture;
+				model.children[0].children[0].children[0].children[0].material.needsUpdate = true;
+
+				scene.add(model);
 			} catch (error) {
 				console.error('Error loading GLB model:', error);
 			}
@@ -108,12 +114,12 @@ console.log("v2");
 					mesh.scale.y = Math.random() * 2 + 1;
 					scene.add(mesh);
 					model2 = mesh;
-model2.visible=false;
+					model2.visible = false;
 					// Position the model
 					// reticle.matrix.decompose( model.position, model.quaternion, model.scale );
 					model.visible = true;
-          
-          model.position.set(model2.position.x,model2.position.y,model2.position.z)
+
+					model.position.set(model2.position.x, model2.position.y, model2.position.z)
 
 					// Apply video texture to first material
 					// if (model.children.length > 0) {
@@ -123,8 +129,7 @@ model2.visible=false;
 					// 		firstChild.material.needsUpdate = true;
 					// 	}
 					// }
-model.children[0].children[0].children[0].children[0].material.map = videoTexture;
-model.children[0].children[0].children[0].children[0].material.needsUpdate = true;
+
 
 					// // Play video
 					// video.play().catch(e => console.log('Video play error:', e));
