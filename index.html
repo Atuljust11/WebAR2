@@ -20,7 +20,8 @@
 			font-size: 16px;
 			cursor: pointer;
 			z-index: 1000;
-			display: block; /* Hidden by default */
+			display: block;
+			/* Hidden by default */
 		}
 	</style>
 </head>
@@ -28,7 +29,7 @@
 <body>
 	<button id="playButton">Play Video</button>
 	<script>
-		var model, model2,video,videoTexture;
+		var model, model2, video, videoTexture;
 	</script>
 
 	<script type="importmap">
@@ -45,7 +46,7 @@
 		import { ARButton } from 'three/addons/webxr/ARButton.js';
 		import { GLTFLoader } from 'three/addons/GLTFLoader.js';
 
-		console.log("v6");
+		console.log("v7");
 		let container;
 		let camera, scene, renderer;
 		let controller;
@@ -62,7 +63,7 @@
 
 		async function init() {
 
-			
+
 			container = document.createElement('div');
 			document.body.appendChild(container);
 
@@ -79,10 +80,11 @@
 			video = document.createElement('video');
 			video.loop = true;
 			video.muted = true;
-			video.crossOrigin = 'anonymous'; 
+			video.crossOrigin = 'anonymous';
 			video.playsInline = true;
 			video.setAttribute('playsinline', '');
 			video.setAttribute('webkit-playsinline', '');
+
 			video.src = 'V2.webm';
 
 			// Important: Wait for video to be ready
@@ -95,9 +97,10 @@
 			videoTexture = new THREE.VideoTexture(video);
 			videoTexture.minFilter = THREE.LinearFilter;
 			videoTexture.magFilter = THREE.LinearFilter;
-			videoTexture.format = THREE.RGBFormat;
+			// videoTexture.format = THREE.RGBFormat;
+			video.format = THREE.RGBAFormat;
 
-			document.getElementById('playButton').addEventListener('click', ()=>{
+			document.getElementById('playButton').addEventListener('click', () => {
 				video.play()
 				console.log(">>")
 			});
@@ -118,11 +121,19 @@
 				glbModel = await loader.loadAsync('all.glb'); // Replace with your GLB path
 				model = glbModel.scene;
 				model.visible = true;
-				model.position.z=-2.0 // Hide until placed
-				model.rotation.z=-1.0
-				model.rotation.y=-1.0
+				model.position.z = -2.0 // Hide until placed
+				model.rotation.z = -2.0
+				model.rotation.y = -1.0
 
-				model.children[0].children[0].children[0].children[0].material.map = videoTexture;
+				model.children[0].children[0].children[0].children[0].material = new THREE.MeshBasicMaterial({
+					map: videoTexture,
+					transparent: true,
+					alphaTest: 0.1,
+					side: THREE.DoubleSide  // Often needed for transparent objects
+				});
+				videoTexture.format = THREE.RGBAFormat;
+
+				// model.children[0].children[0].children[0].children[0].material.map = videoTexture;
 				model.children[0].children[0].children[0].children[0].material.needsUpdate = true;
 
 				scene.add(model);
@@ -132,9 +143,9 @@
 			const geometry = new THREE.CylinderGeometry(0.1, 0.1, 0.2, 32).translate(0, 0.1, 0);
 			function onSelect() {
 				if (reticle.visible && !objectsPlaced && model) {
-					model.position.z=0 // Hide until placed
-				model.rotation.z=0
-				model.rotation.y=0
+					model.position.z = 0 // Hide until placed
+					model.rotation.z = 0
+					model.rotation.y = 0
 
 					const material = new THREE.MeshPhongMaterial({ color: 0xffffff * Math.random() });
 					const mesh = new THREE.Mesh(geometry, material);
